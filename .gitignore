@@ -226,4 +226,4 @@ __marimo__/
 
 # Project specific
 log
-app.db
+vlan-manager.db
