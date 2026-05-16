@@ -1,0 +1,123 @@
+alloy:
+  configMap:
+    create: true
+    content: |
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // enrich with useful Loki labels
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        // Drop pods explicitly opted out
+        rule {
+          source_labels = ["__meta_kubernetes_pod_annotation_alloy_logs_scrape"]
+          action        = "drop"
+          regex         = "false"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app"]
+          target_label  = "app"
+        }
+      }
+
+      // Tail logs via the Kubernetes API (no host-path mounting needed)
+      loki.source.kubernetes "pod_logs" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.process.json_logs.receiver]
+      }
+      
+      // parse JSON, promote labels
+      loki.process "json_logs" {
+        stage.match {
+          selector      = "{namespace=~\".+\"}"
+          pipeline_name = "json_pipeline"
+      
+          // Only process lines that look like JSON objects
+          stage.drop {
+            expression          = "^[^{].*"
+            drop_counter_reason = "not_json"
+          }
+      
+          stage.regex {
+            expression = "(?P<json_body>\\{.*)"
+          }
+      
+          stage.output {
+            source = "json_body"
+          }
+      
+          // JSON parse — extracts ALL fields. Extra fields wont be displayed
+          stage.json {
+            expressions = {
+              "levelname"   = "levelname",
+              "service"     = "service",
+              "trail_id"    = "trail_id",
+              "name"        = "name",
+              "message"     = "message",
+              "environment" = "environment",
+              "status_code" = "status_code",
+              "method"      = "method",
+              "path"        = "path",
+              "duration_ms" = "duration_ms",
+              "asctime"     = "asctime",
+              "error"       = "error",
+            }
+          }
+  
+          // Promote low-cardinality fields to labels if they exist
+          stage.labels {
+            values = {
+              "level"       = "levelname",
+              "service"     = "service",
+              "environment" = "environment",
+              "method"      = "method",
+              "name"        = "name",
+            }
+          }
+  
+          // Use the JSON timestamp if present, fall back to ingest time
+          stage.timestamp {
+            source            = "asctime"
+            format            = "RFC3339Nano"
+            fallback_formats  = ["RFC3339", "UnixMs"]
+          }
+        }
+      
+        stage.label_drop {
+          values = ["app", "service_name", "instance", "job", "stream"]
+        }
+      
+        forward_to = [loki.write.loki.receiver]
+      }
+
+      // Ship to Loki
+      loki.write "loki" {
+        endpoint {
+          url = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+# Run as a DaemonSet — one pod per node, same as Promtail
+controller:
+  type: daemonset
+
+# RBAC so Alloy can watch pods cluster-wide
+rbac:
+  create: true
+
+serviceAccount:
+  create: true
