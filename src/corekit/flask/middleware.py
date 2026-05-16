@@ -15,7 +15,7 @@ from flask import g, request
 from corekit.context import trail_id_var, user_id_var
 from corekit.utils import calc_duration, get_client_ip
 from corekit.execptions import DomainError
-from corekit.flask import error_response
+from corekit.flask.responses import error_response
 
 logger = logging.getLogger(__name__)
 
