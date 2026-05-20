@@ -25,7 +25,7 @@ def success_response(data=None, status=200, meta=None):
 
 def error_response(code, message, status=500, details=None, meta=None):
     payload = {
-        'success': True,
+        'success': False,
         'error': {
             'code': code,
             'message': message,
