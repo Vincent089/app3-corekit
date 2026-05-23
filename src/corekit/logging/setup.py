@@ -11,7 +11,7 @@
 import os
 import logging
 from logging.config import dictConfig
-from corekit.logging import TrailFilter, ConsoleFormatter, JsonFormatter
+from corekit.logging import TrailFilter, ConsoleFormatter, ISOJsonFormatter
 
 def setup_logging(service_name, log_level='INFO'):
     log_level = getattr(logging, log_level.upper())
@@ -43,7 +43,7 @@ def setup_logging(service_name, log_level='INFO'):
                 )
             },
             'json': {
-                '()': JsonFormatter,
+                '()': ISOJsonFormatter,
                 'fmt': (
                     '%(asctime)s '
                     '%(levelname)s '

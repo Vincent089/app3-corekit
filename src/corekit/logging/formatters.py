@@ -8,6 +8,7 @@
 #  distributed under the License is distributed on an "AS IS" BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  -----------------------------------------------------------------------------
+from datetime import datetime, timezone
 import logging
 from pythonjsonlogger.json import JsonFormatter
 
@@ -32,3 +33,16 @@ class ConsoleFormatter(logging.Formatter):
             return f"{base_message} {' '.join(extras)}"
 
         return base_message
+
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=timezone.utc)
+
+        return dt.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+
+
+class ISOJsonFormatter(JsonFormatter):
+
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=timezone.utc)
+
+        return dt.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
