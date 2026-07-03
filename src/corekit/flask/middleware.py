@@ -12,6 +12,7 @@ import logging
 import time
 import uuid
 from flask import g, request
+from prometheus_flask_exporter import PrometheusMetrics
 from corekit.context import trail_id_var, user_id_var
 from corekit.utils import calc_duration, get_client_ip
 from corekit.execptions import DomainError
@@ -21,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 def register_middleware(app):
+    PrometheusMetrics(app)
+
     @app.errorhandler(DomainError)
     def handle_domain_error(e):
         return error_response(code=e.__class__.__name__, message=str(e), status=e.status_code)
