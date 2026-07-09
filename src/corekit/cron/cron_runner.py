@@ -47,6 +47,7 @@ class CronRunner:
 
     def execute(self, job_name: str):
         handler = self._handlers.get(job_name)
+        trail_id_var.set(str(uuid.uuid4()))
 
         logger.info('Starting cron', extra={ 'job_name': job_name })
 
@@ -54,7 +55,6 @@ class CronRunner:
             logger.error('Unknown cron job', extra={ 'job_name': job_name })
             return
 
-        trail_id_var.set(str(uuid.uuid4()))
         result = handler()
 
         logger.info('Cron completed', extra={ 'job_name': job_name, 'result': result })
