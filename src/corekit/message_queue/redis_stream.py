@@ -14,6 +14,7 @@ import uuid
 import redis
 from typing import Callable
 from corekit.context import trail_id_var, user_id_var
+from corekit.execptions import AlreadyExistsError
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,10 @@ class RedisStreamConsumer:
             self.process_message(stream_key, msg_id, data)
             self.r.xack(stream_key, self.consumer_group, msg_id)
             logger.debug('Acked', extra={ 'msg_id': msg_id })
+
+        except AlreadyExistsError as exc:
+            logger.warning('Message data already process, removing from PEL', extra={ 'msg_id': msg_id, 'err': exc })
+            self.r.xack(stream_key, self.consumer_group, msg_id)
 
         except Exception as exc:
             logger.error('Failed to process message, leaving in PEL', extra={ 'msg_id': msg_id, 'err': exc })
