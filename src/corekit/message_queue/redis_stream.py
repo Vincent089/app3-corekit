@@ -134,10 +134,10 @@ class RedisStreamConsumer:
         try:
             self.process_message(stream_key, msg_id, data)
             self.r.xack(stream_key, self.consumer_group, msg_id)
-            logger.debug('Acked', extra={ 'msg': msg_id })
+            logger.debug('Acked', extra={ 'msg_id': msg_id })
 
         except Exception as exc:
-            logger.error('Failed to process message, leaving in PEL', extra={ 'msg': msg_id, 'err': exc })
+            logger.error('Failed to process message, leaving in PEL', extra={ 'msg_id': msg_id, 'err': exc })
 
     def start_listening(self):
         """
