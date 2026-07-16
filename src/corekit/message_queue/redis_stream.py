@@ -76,11 +76,11 @@ class RedisStreamConsumer:
                 self.r.xgroup_create(stream_key, self.consumer_group, id='0', mkstream=True)
                 logger.info('Consumer group created', extra={ 'consumer_group': self.consumer_group })
 
-            except redis.exceptions.ResponseError as exc:
-                if 'BUSYGROUP' in str(exc):
+            except redis.exceptions.ResponseError as e:
+                if 'BUSYGROUP' in str(e):
                     logger.debug('Consumer group already exists', extra={ 'consumer_group': self.consumer_group })
                 else:
-                    raise exc
+                    raise e
 
     def recover_pending(self):
         """
@@ -137,12 +137,12 @@ class RedisStreamConsumer:
             self.r.xack(stream_key, self.consumer_group, msg_id)
             logger.debug('Acked', extra={ 'msg_id': msg_id })
 
-        except AlreadyExistsError as exc:
-            logger.warning('Message data already process, removing from PEL', extra={ 'msg_id': msg_id, 'err': exc })
+        except AlreadyExistsError as e:
+            logger.warning('Message data already process, removing from PEL', extra={ 'msg_id': msg_id, 'err': e })
             self.r.xack(stream_key, self.consumer_group, msg_id)
 
-        except Exception as exc:
-            logger.error('Failed to process message, leaving in PEL', extra={ 'msg_id': msg_id, 'err': exc })
+        except Exception as e:
+            logger.error('Failed to process message, leaving in PEL', extra={ 'msg_id': msg_id, 'err': e })
 
     def start_listening(self):
         """
@@ -174,8 +174,8 @@ class RedisStreamConsumer:
                     for msg_id, data in messages:
                         self._process_and_ack(stream_key, msg_id, data)
 
-            except redis.RedisError as exc:
-                logger.error('Redis error in consume loop — retrying in 5s', extra={ 'err': exc })
+            except redis.RedisError as e:
+                logger.error('Redis error in consume loop — retrying in 5s', extra={ 'err': e })
                 time.sleep(5)
 
 class RedisStreamProducer:
