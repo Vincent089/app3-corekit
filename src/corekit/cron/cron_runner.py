@@ -45,7 +45,7 @@ class CronRunner:
 
         return self
 
-    def execute(self, job_name: str):
+    def execute(self, job_name: str, *args, **kwargs):
         handler = self._handlers.get(job_name)
         trail_id_var.set(str(uuid.uuid4()))
 
@@ -55,6 +55,6 @@ class CronRunner:
             logger.error('Unknown job', extra={ 'job_name': job_name })
             return
 
-        result = handler()
+        result = handler(*args, **kwargs)
 
         logger.info('Job completed', extra={ 'job_name': job_name, 'result': result })
