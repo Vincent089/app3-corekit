@@ -24,7 +24,7 @@ class StreamRouter:
     def __init__(self):
         self._handlers: dict[str, Callable] = { }
 
-    def register(self, stream_key: str):
+    def event(self, stream_key: str):
         def decorator(fn):
             self._handlers[stream_key] = fn
             return fn
@@ -48,7 +48,7 @@ class RedisStreamConsumer:
     def stream_keys(self) -> list[str]:
         return list(self._handlers.keys())
 
-    def include_router(self, router: StreamRouter):
+    def register_event_router(self, router: StreamRouter):
         self._handlers.update(router.handlers())
 
         return self
