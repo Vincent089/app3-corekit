@@ -1,6 +1,6 @@
 [project]
 name = "corekit"
-version = "0.4.0"
+version = "0.5.0"
 description = "App3 shared platform utilities"
 authors = [
     { name = "Vincent Corriveau", email = "vincent.corriveau89@gmail.com" }
