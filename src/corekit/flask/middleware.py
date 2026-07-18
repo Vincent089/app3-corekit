@@ -10,18 +10,24 @@
 #  -----------------------------------------------------------------------------
 import logging
 import time
+
 from flask import g, request
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from prometheus_flask_exporter import PrometheusMetrics
+
 from corekit.context import user_id_var
-from corekit.utils import calc_duration, get_client_ip
 from corekit.execptions import DomainError
 from corekit.flask.responses import error_response
+from corekit.utils import calc_duration, get_client_ip
 
 logger = logging.getLogger(__name__)
 
 
 def register_middleware(app):
     PrometheusMetrics(app)
+
+    # traceparent extraction and span creation for this specific app instance — init_otel() has to runs before this
+    FlaskInstrumentor().instrument_app(app)
 
     @app.errorhandler(DomainError)
     def handle_domain_error(e):
@@ -32,10 +38,6 @@ def register_middleware(app):
         g.start_time = time.time()
         g.client_ip = get_client_ip(request)
 
-        # traceparent extraction and span creation are handled automatically by
-        # FlaskInstrumentor (wired in corekit.telemetry.otel.init_otel) — no manual
-        # header parsing here. trace_id/span_id land on log records via the OTel
-        # logging bridge in corekit.logging, not via this middleware.
         user_id = request.headers.get('X-User-ID', None)
 
         user_id_var.set(user_id)

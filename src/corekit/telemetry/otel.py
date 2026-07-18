@@ -12,7 +12,6 @@ import os
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.propagate import set_global_textmap
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
@@ -26,6 +25,11 @@ def init_otel(service_name: str, environment: str):
     """
     Call once at service startup, before the Flask app is created.
     No-op if OTEL_ENABLED is unset/false — lets local dev run without Alloy.
+
+    Sets up the SDK (tracer provider, exporter, W3C propagation) shared by every
+    transport — cron, Redis streams, and Flask. Flask's own auto-instrumentation
+    lives in corekit.flask.middleware.register_middleware(), not here, since it
+    has to run against a specific already-constructed app instance.
     """
     if os.getenv('OTEL_ENABLED', 'false').lower() != 'true':
         return
@@ -42,8 +46,6 @@ def init_otel(service_name: str, environment: str):
     trace.set_tracer_provider(provider)
 
     set_global_textmap(TraceContextTextMapPropagator())
-
-    FlaskInstrumentor().instrument()
 
     try:
         from opentelemetry.instrumentation.requests import RequestsInstrumentor
