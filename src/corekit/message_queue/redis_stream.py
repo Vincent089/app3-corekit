@@ -8,12 +8,13 @@
 #  distributed under the License is distributed on an 'AS IS' BASIS,
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  -----------------------------------------------------------------------------
+import json
 import time
 import logging
-import uuid
 import redis
 from typing import Callable
-from corekit.context import trail_id_var, user_id_var
+from opentelemetry import context, propagate
+from corekit.context import user_id_var
 from corekit.execptions import AlreadyExistsError
 
 logger = logging.getLogger(__name__)
@@ -126,11 +127,23 @@ class RedisStreamConsumer:
         Process a single message. Only ack on success.
         A failed message is left in the PEL intentionally.
         """
-        trail_id = data.pop('_trail_id', str(uuid.uuid4()))
+        otel_context_raw = data.pop('_otel_context', None)
+        legacy_trail_id = data.pop('_trail_id', None)
         user_id = data.pop('_user_id', 'unknown')
 
-        trail_id_var.set(trail_id)
         user_id_var.set(user_id)
+
+        # Restore the producer's trace context so this handler's spans/logs join
+        # the same trace. Handlers themselves stay OTel-unaware — this is the
+        # only place context is attached/detached.
+        token = None
+        if otel_context_raw:
+            token = context.attach(propagate.extract(json.loads(otel_context_raw)))
+        elif legacy_trail_id:
+            logger.warning(
+                    'Envelope carries legacy _trail_id with no _otel_context, continuing without trace context',
+                    extra={ 'msg_id': msg_id }
+            )
 
         try:
             self.process_message(stream_key, msg_id, data)
@@ -143,6 +156,10 @@ class RedisStreamConsumer:
 
         except Exception as e:
             logger.error('Failed to process message, leaving in PEL', extra={ 'msg_id': msg_id, 'err': e })
+
+        finally:
+            if token is not None:
+                context.detach(token)
 
     def start_listening(self):
         """
@@ -194,9 +211,14 @@ class RedisStreamProducer:
         """
         logger.info('Emitting event.', extra={ 'stream_key': stream_key, 'payload': payload })
 
+        # XADD fields are flat strings, so the W3C carrier (traceparent/tracestate)
+        # is JSON-encoded under _otel_context rather than stored as a nested dict.
+        carrier = { }
+        propagate.inject(carrier)
+
         message = {
             **payload,
-            '_trail_id': trail_id_var.get(),
+            '_otel_context': json.dumps(carrier),
             '_user_id': user_id_var.get(),
         }
 

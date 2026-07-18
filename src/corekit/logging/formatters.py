@@ -15,7 +15,7 @@ from pythonjsonlogger.json import JsonFormatter
 EXCLUDED_KEYS = { 'name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 'filename', 'module', 'exc_info',
                   'exc_text', 'stack_info', 'lineno', 'funcName', 'created', 'msecs', 'relativeCreated',
                   'taskName', 'thread', 'threadName', 'processName', 'process', 'message', 'asctime',
-                  'trail_id', 'service' }
+                  'trace_id', 'span_id', 'service' }
 
 
 class ConsoleFormatter(logging.Formatter):

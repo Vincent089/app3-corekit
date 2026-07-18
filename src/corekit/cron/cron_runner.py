@@ -9,10 +9,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  -----------------------------------------------------------------------------
 import logging
-import uuid
 from typing import Callable
-
-from corekit.context import trail_id_var
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +44,6 @@ class CronRunner:
 
     def execute(self, job_name: str, *args, **kwargs):
         handler = self._handlers.get(job_name)
-        trail_id_var.set(str(uuid.uuid4()))
 
         logger.info('Starting job', extra={ 'job_name': job_name })
 

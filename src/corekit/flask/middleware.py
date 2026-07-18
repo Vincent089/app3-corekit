@@ -10,10 +10,9 @@
 #  -----------------------------------------------------------------------------
 import logging
 import time
-import uuid
 from flask import g, request
 from prometheus_flask_exporter import PrometheusMetrics
-from corekit.context import trail_id_var, user_id_var
+from corekit.context import user_id_var
 from corekit.utils import calc_duration, get_client_ip
 from corekit.execptions import DomainError
 from corekit.flask.responses import error_response
@@ -33,10 +32,12 @@ def register_middleware(app):
         g.start_time = time.time()
         g.client_ip = get_client_ip(request)
 
-        log_id = request.headers.get('X-Trail-ID', str(uuid.uuid4()))
+        # traceparent extraction and span creation are handled automatically by
+        # FlaskInstrumentor (wired in corekit.telemetry.otel.init_otel) — no manual
+        # header parsing here. trace_id/span_id land on log records via the OTel
+        # logging bridge in corekit.logging, not via this middleware.
         user_id = request.headers.get('X-User-ID', None)
 
-        trail_id_var.set(log_id)
         user_id_var.set(user_id)
 
         logger.info(
@@ -53,8 +54,6 @@ def register_middleware(app):
     @app.after_request
     def after_request(response):
         duration = calc_duration(g.start_time)
-
-        response.headers["X-Trail-ID"] = trail_id_var.get()
 
         logger.info(
                 f'Response',

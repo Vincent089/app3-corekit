@@ -11,7 +11,7 @@
 import os
 import logging
 from logging.config import dictConfig
-from corekit.logging import TrailFilter, ConsoleFormatter, ISOJsonFormatter
+from corekit.logging import ContextFilter, ConsoleFormatter, ISOJsonFormatter
 
 def setup_logging(service_name, log_level='INFO'):
     log_level = getattr(logging, log_level.upper())
@@ -26,7 +26,7 @@ def setup_logging(service_name, log_level='INFO'):
 
         'filters': {
             'context': {
-                '()': TrailFilter,
+                '()': ContextFilter,
                 'service_name': service_name
             }
         },
@@ -38,7 +38,7 @@ def setup_logging(service_name, log_level='INFO'):
                     '[%(asctime)s] '
                     '[%(levelname)-8s] '
                     '[%(service)s] '
-                    '[%(trail_id)-36s] '
+                    '[%(trace_id)-32s] '
                     '%(name)-30s - %(message)s'
                 )
             },
@@ -48,7 +48,8 @@ def setup_logging(service_name, log_level='INFO'):
                     '%(asctime)s '
                     '%(levelname)s '
                     '%(service)s '
-                    '%(trail_id)s '
+                    '%(trace_id)s '
+                    '%(span_id)s '
                     '%(name)s '
                     '%(message)s '
                 )
